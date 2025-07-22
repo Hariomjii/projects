@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Squid Game</title>
+
+  <!-- FontAwesome for icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">   
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #202020;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .panel {
+        background: radial-gradient(circle at 30% 30%, #fff, #686464);
+        display: flex;
+        width: 100%;
+        height: 100vh;
+        position: relative;
+    }
+
+    .left, .right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Floor Mark styling */
+    .floor-mark {
+      font-size: 10vw;
+      font-weight: bold;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+      opacity: 0.9;
+      line-height: 1;
+      z-index: 2;
+    }
+
+    .floor-o {
+      color: #001aff;
+      text-shadow: 0 0 40px #001aff, 0 0 80px #001aff;
+    }
+
+    .floor-x {
+      color: #ff0000;
+      text-shadow: 0 0 40px #ff0000;
+    }
+
+    /* Center divider line */
+    .center-lines {
+      position: absolute;
+      bottom: 120px;
+      top: 180px;
+      left: 50%;
+      width: 10px;
+      transform: translateX(-50%);
+      z-index: 1; /* Keeps it below the floor marks */
+    }
+
+    .line-red {
+      position: absolute;
+      width: 7px;
+      height: 100%;
+      background: #001aff;
+      transform: translateX(-10px);
+    }
+
+    .line-blue {
+      position: absolute;
+      width: 7px;
+      height: 100%;
+      background: #ff0000;
+      transform: translateX(10px);
+    }
+
+    /* Button and counter box */
+    .button-box {
+      position: absolute;
+      top: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 40px;
+      padding: 20px 40px;
+      background: #128a7a;
+      border-radius: 10px;
+      border: 6px #000 solid;
+      z-index: 1;
+    }
+
+    .game-button {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 4px solid #111;
+      box-shadow: inset 0 0 20px rgba(255,255,255,0.4),
+                  0 0 30px rgba(0,0,0,0.6);
+      position: relative;
+      text-align: center;
+      line-height: 73px;
+      font-weight: bold;
+      font-size: 3.3em;
+      color: white;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s;
+    }
+
+    .game-button:active {
+      transform: scale(0.95);
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.4),
+                  0 0 10px rgba(0,0,0,0.4);
+    }
+
+    .btn-x {
+      background: radial-gradient(circle at 30% 30%, #ff3535, #ff0000);
+      box-shadow: 0 0 20px #ff0000;
+    }
+
+    .btn-o {
+      background: radial-gradient(circle at 30% 30%, #4fa1ff, blue);
+      box-shadow: 0 0 20px blue;
+    }
+
+    /* Retro pixelated counter styling */
+    .counter {
+      position: absolute;
+      bottom: 30px;
+      font-size: 3rem; /* Smaller size */
+      letter-spacing: 5px;
+      text-align: center;
+      width: 18rem;
+      height: 6rem;
+      z-index: 3;
+      border: 8px solid #000;
+      background: rgb(22, 78, 20);
+    }
+
+    .counter-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding-left, padding-right: 60% ;
+      gap: 10px; /* Space between X and O */
+    }
+
+    .counter-left, .counter-right {
+      font-size: 3rem; /* Counter number size */
+      margin-top: 0.5rem;
+    }
+
+    .colon {
+      font-size: 4rem;
+      color: white;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <!-- Left Side (for "O") -->
+    <div class="left">
+      <div class="floor-mark floor-o"><i class="fa-regular fa-circle fa-xl"></i></div>
+    </div>
+
+    <!-- Center Divider Line -->
+    <div class="center-lines">
+      <div class="line-red"></div>
+      <div class="line-blue"></div>
+    </div>
+
+    <!-- Right Side (for "X") -->
+    <div class="right">
+      <div class="floor-mark floor-x"><i class="fa-solid fa-x fa-xl"></i></div>
+    </div>
+  </div>
+
+  <!-- Buttons and Counters -->
+  <div class="button-box">
+    <div class="game-button btn-o" id="btnO"><i class="fa-regular fa-circle"></i></div>
+    <div class="game-button btn-x" id="btnX"><i class="fa-solid fa-x"></i></div>
+  </div>
+
+  <!-- Score Counters side-by-side -->
+  <div class="counter">
+    <div class="counter-container">
+      <div class="counter-left" id="counterO">000</div>
+      <div class="colon">:</div>
+      <div class="counter-right" id="counterX">000</div>
+    </div>
+  </div>
+
+  <script>
+    const btnO = document.getElementById('btnO');
+    const btnX = document.getElementById('btnX');
+    const counterO = document.getElementById('counterO');
+    const counterX = document.getElementById('counterX');
+
+    let countO = 0;
+    let countX = 0;
+
+    btnO.addEventListener('click', () => {
+      countO++;
+      counterO.textContent = countO.toString().padStart(3, '0');
+    });
+
+    btnX.addEventListener('click', () => {
+      countX++;
+      counterX.textContent = countX.toString().padStart(3, '0');
+    });
+  </script>
+</body>
+</html>
