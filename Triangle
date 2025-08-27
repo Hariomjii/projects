@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Triangle Dots with Controls</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            user-select: none;
+            font-family: sans-serif;
+        }
+
+        canvas {
+            border: 1px solid #222;
+            width: 90vw;
+            height: 90vw;
+            max-width: 800px;
+            max-height: 800px;
+            background: black;
+            display: block;
+            margin-top: 20px;
+        }
+
+        .info {
+            color: white;
+            font-size: 14px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .controls,
+        .sliders {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 0 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button,
+        input[type="range"],
+        input[type="color"] {
+            padding: 8px 12px;
+            font-size: 14px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        #startButton {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #pauseButton {
+            background-color: #f0ad4e;
+            color: white;
+        }
+
+        label {
+            color: white;
+            font-size: 14px;
+            margin-right: 4px;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        #speedSlider, #dotSizeSlider {
+            padding-right: 0;
+            padding-left: 0;
+        }
+
+        #colorPicker {
+            padding: 0 2px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="info">
+        Speed: <span id="speedValue">50</span> |
+        Dot size: <span id="dotSizeValue">0.3</span> |
+        Dots drawn: <span id="dotCount">0</span>
+    </div>
+
+    <div class="sliders">
+        <div class="slider-group">
+            <label for="speedSlider">Speed</label>
+            <input type="range" id="speedSlider" min="1" max="200" value="50" />
+        </div>
+        <div class="slider-group">
+            <label for="dotSizeSlider">Dot Size</label>
+            <input type="range" id="dotSizeSlider" min="0.1" max="2" step="0.1" value="0.3" />
+        </div>
+        <div class="slider-group">
+            <label for="colorPicker">Color</label>
+            <input type="color" id="colorPicker" value="#00ff00" />
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="startButton">Start</button>
+        <button id="pauseButton">Pause</button>
+    </div>
+
+    <canvas id="triangleCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('triangleCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const triangle = [
+            { x: 0.5, y: 0 },
+            { x: 0, y: 1 },
+            { x: 1, y: 1 }
+        ];
+
+        let stop = false;
+        let paused = false;
+        let animationRunning = false;
+        let currentPoint = null;
+        let dotCounter = 0;
+        let animationFrameId = null;
+
+        const dotCountDisplay = document.getElementById('dotCount');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        const dotSizeSlider = document.getElementById('dotSizeSlider');
+        const dotSizeValue = document.getElementById('dotSizeValue');
+        const pauseButton = document.getElementById('pauseButton');
+        const colorPicker = document.getElementById('colorPicker');
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+            drawTriangle();
+        }
+
+        function drawTriangle() {
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+            const v0 = { x: triangle[0].x * w, y: triangle[0].y * h };
+            const v1 = { x: triangle[1].x * w, y: triangle[1].y * h };
+            const v2 = { x: triangle[2].x * w, y: triangle[2].y * h };
+            ctx.clearRect(0, 0, w, h);
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(v0.x, v0.y);
+            ctx.lineTo(v1.x, v1.y);
+            ctx.lineTo(v2.x, v2.y);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        function getCanvasPoint(p) {
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+            return { x: p.x * w, y: p.y * h };
+        }
+
+        function getRandomPointInsideTriangle() {
+            const r1 = Math.random();
+            const r2 = Math.random();
+            const sqrtR1 = Math.sqrt(r1);
+            const x = (1 - sqrtR1) * triangle[0].x +
+                sqrtR1 * (1 - r2) * triangle[1].x +
+                sqrtR1 * r2 * triangle[2].x;
+            const y = (1 - sqrtR1) * triangle[0].y +
+                sqrtR1 * (1 - r2) * triangle[1].y +
+                sqrtR1 * r2 * triangle[2].y;
+            return { x, y };
+        }
+
+        function drawDot(px1, py1, px2, py2, size, color) {
+            const centerX = (px1 + px2) / 2;
+            const centerY = (py1 + py2) / 2;
+            const scale = canvas.width / canvas.clientWidth;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, size * scale, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+        }
+
+        function drawLoop() {
+            if (stop || paused) return;
+
+            const speed = parseInt(speedSlider.value);
+            const dotSize = parseFloat(dotSizeSlider.value);
+            const dotColor = colorPicker.value;
+
+            for (let i = 0; i < speed; i++) {
+                const target = triangle[Math.floor(Math.random() * 3)];
+                const from = getCanvasPoint(currentPoint);
+                const to = getCanvasPoint(target);
+                drawDot(from.x, from.y, to.x, to.y, dotSize, dotColor);
+
+                currentPoint = {
+                    x: (currentPoint.x + target.x) / 2,
+                    y: (currentPoint.y + target.y) / 2
+                };
+                dotCounter++;
+            }
+
+            dotCountDisplay.textContent = dotCounter.toLocaleString();
+            animationFrameId = requestAnimationFrame(drawLoop);
+        }
+
+        function startProcess() {
+            stop = false;
+            paused = false;
+            animationRunning = true;
+            dotCounter = 0;
+            dotCountDisplay.textContent = "0";
+            drawTriangle();
+            currentPoint = getRandomPointInsideTriangle();
+            drawLoop();
+        }
+
+        // UI Handlers
+        speedSlider.addEventListener('input', () => {
+            speedValue.textContent = speedSlider.value;
+        });
+
+        dotSizeSlider.addEventListener('input', () => {
+            dotSizeValue.textContent = dotSizeSlider.value;
+        });
+
+        document.getElementById('startButton').addEventListener('click', () => {
+            stop = true;
+            cancelAnimationFrame(animationFrameId);
+            setTimeout(startProcess, 50);
+        });
+
+        pauseButton.addEventListener('click', () => {
+            paused = !paused;
+            pauseButton.textContent = paused ? 'Resume' : 'Pause';
+            if (!paused && animationRunning) {
+                drawLoop();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            stop = true;
+            cancelAnimationFrame(animationFrameId);
+            setTimeout(() => {
+                resizeCanvas();
+                if (animationRunning && !paused) {
+                    startProcess();
+                }
+            }, 100);
+        });
+
+        // Initial setup
+        resizeCanvas();
+    </script>
+
+</body>
+
+</html>
