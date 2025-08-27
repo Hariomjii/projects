@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Responsive Triangle Dots with Speed Control</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+        }
+
+        canvas {
+            border: 1px solid #222;
+            width: 90vw;
+            height: 90vw;
+            max-width: 800px;
+            max-height: 800px;
+            background: black;
+            display: block;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            width: 100%;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+
+        button,
+        input[type="range"] {
+            margin: 0 10px;
+            padding: 8px 16px;
+            font-size: 16px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        #startButton {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #stopButton {
+            background-color: #f44336;
+            color: white;
+        }
+
+        #speedSlider {
+            flex: 1;
+            min-width: 150px;
+            max-width: 400px;
+            margin: 10px;
+            padding: 0;
+        }
+
+        label {
+            color: white;
+            font-size: 14px;
+            margin-left: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="triangleCanvas"></canvas>
+    
+    <label for="speedSlider">Speed: <span id="speedValue">50</span></label>
+    
+    <div class="controls">
+        <button id="startButton">Start</button>
+        <button id="stopButton">Stop</button>
+        <input type="range" id="speedSlider" min="1" max="200" value="50">
+        <label for="speedSlider">Speed</label>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('triangleCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Triangle vertices as normalized (0 to 1) coordinates
+        const triangle = [
+            { x: 0.5, y: 0 },  // top-center
+            { x: 0, y: 1 },    // bottom-left
+            { x: 1, y: 1 }     // bottom-right
+        ];
+
+        let stop = false;
+        let animationRunning = false;
+        let currentPoint = null;
+
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+
+            // Set canvas size in physical pixels
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+
+            // Scale drawing context to handle high DPI
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+
+            drawTriangle();
+        }
+
+        function drawTriangle() {
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+
+            const v0 = { x: triangle[0].x * w, y: triangle[0].y * h };
+            const v1 = { x: triangle[1].x * w, y: triangle[1].y * h };
+            const v2 = { x: triangle[2].x * w, y: triangle[2].y * h };
+
+            ctx.clearRect(0, 0, w, h);
+            ctx.strokeStyle = "#333";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(v0.x, v0.y);
+            ctx.lineTo(v1.x, v1.y);
+            ctx.lineTo(v2.x, v2.y);
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        function getCanvasPoint(p) {
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+            return {
+                x: p.x * w,
+                y: p.y * h
+            };
+        }
+
+        function getRandomPointInsideTriangle() {
+            const r1 = Math.random();
+            const r2 = Math.random();
+            const sqrtR1 = Math.sqrt(r1);
+
+            const x = (1 - sqrtR1) * triangle[0].x +
+                sqrtR1 * (1 - r2) * triangle[1].x +
+                sqrtR1 * r2 * triangle[2].x;
+
+            const y = (1 - sqrtR1) * triangle[0].y +
+                sqrtR1 * (1 - r2) * triangle[1].y +
+                sqrtR1 * r2 * triangle[2].y;
+
+            return { x, y };
+        }
+
+        function drawDot(px1, py1, px2, py2) {
+            const centerX = (px1 + px2) / 2;
+            const centerY = (py1 + py2) / 2;
+            const scale = canvas.width / canvas.clientWidth;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 0.3 * scale, 0, Math.PI * 2);
+            ctx.fillStyle = 'lime';
+            ctx.fill();
+        }
+
+        function startProcess() {
+            stop = false;
+            animationRunning = true;
+            drawTriangle();
+
+            if (!currentPoint) {
+                currentPoint = getRandomPointInsideTriangle();
+            }
+
+            function drawLoop() {
+                if (stop) {
+                    animationRunning = false;
+                    return;
+                }
+
+                const speed = parseInt(document.getElementById('speedSlider').value);
+
+                for (let i = 0; i < speed; i++) {
+                    const target = triangle[Math.floor(Math.random() * 3)];
+                    const from = getCanvasPoint(currentPoint);
+                    const to = getCanvasPoint(target);
+                    drawDot(from.x, from.y, to.x, to.y);
+
+                    currentPoint = {
+                        x: (currentPoint.x + target.x) / 2,
+                        y: (currentPoint.y + target.y) / 2
+                    };
+                }
+
+                requestAnimationFrame(drawLoop);
+            }
+
+            drawLoop();
+        }
+        
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+
+        speedSlider.addEventListener('input', () => {
+            speedValue.textContent = speedSlider.value;
+        });
+ 
+
+        document.getElementById('startButton').addEventListener('click', startProcess);
+        document.getElementById('stopButton').addEventListener('click', () => {
+            stop = true;
+            animationRunning = false;
+        });
+
+        document.getElementById('speedSlider').addEventListener('input', () => {
+            // speed value is read dynamically each frame
+        });
+
+        window.addEventListener('resize', () => {
+            stop = true;
+            setTimeout(() => {
+                resizeCanvas();
+                if (animationRunning) startProcess();
+            }, 100);
+        });
+
+        // Initial setup
+        resizeCanvas();
+    </script>
+</body>
+
+</html>
