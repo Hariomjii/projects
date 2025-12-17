@@ -42,23 +42,26 @@
 
 
         const baseUrl = 'https://www.pokemon.com/static-assets/content-assets/cms2/img/pokedex/detail/'
-        const img = document.querySelector('.image img')
-        const name = document.querySelector('.image span')
-        function rand() {
-            const random = Math.floor(Math.random() * 1025) + 1
+const img = document.querySelector('.card img');
+const pokeName = document.querySelector('.card-title');
 
-            if (random < 10) {
-                img.src = `${baseUrl}${0}${0}${random}.png`
-            }
-            else if (random < 100) {
-                img.src = `${baseUrl}${0}${random}.png`
-            }
-            else {
-                img.src = `${baseUrl}${random}.png`
-            }
 
-            name.innerText = `#${random} ${pokemonNames[random]}`
-        }
+
+function rand() {
+    const random = Math.floor(Math.random() * 1025) + 1
+
+    if (random < 10) {
+        img.src = `${baseUrl}${0}${0}${random}.png`
+    }
+    else if (random < 100) {
+        img.src = `${baseUrl}${0}${random}.png`
+    }
+    else {
+        img.src = `${baseUrl}${random}.png`
+    }
+
+    pokeName.innerText = `#${random} ${pokemonNames[random]}`
+}
     </script>
 </body>
 
